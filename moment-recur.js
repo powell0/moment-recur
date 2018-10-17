@@ -522,16 +522,16 @@
             var data = {};
 
             if (this.start && moment(this.start).isValid()) {
-                data.start = this.start.format("L");
+                data.start = this.start.format('YYYY-MM-DD');
             }
 
             if (this.end && moment(this.end).isValid()) {
-                data.end = this.end.format("L");
+                data.end = this.end.format('YYYY-MM-DD');
             }
 
             data.exceptions = [];
             for (var i = 0, len = this.exceptions.length; i < len; i++) {
-                data.exceptions.push(this.exceptions[i].format("L"));
+                data.exceptions.push(this.exceptions[i].format('YYYY-MM-DD'));
             }
 
             data.rules = this.rules;
@@ -570,27 +570,31 @@
         };
 
         // Forgets rules (by passing measure) and exceptions (by passing date)
-        Recur.prototype.forget = function(dateOrRule) {
+        Recur.prototype.forget = function(dateOrRule, format) {
             var i, len;
-            var whatMoment = moment(dateOrRule);
+            var measure = pluralize(dateOrRule);
 
-            // If valid date, try to remove it from exceptions
-            if (whatMoment.isValid()) {
-                whatMoment = whatMoment.dateOnly(); // change to date only for perfect comparison
-                for (i = 0, len = this.exceptions.length; i < len; i++) {
-                    if (whatMoment.isSame(this.exceptions[i])) {
-                        this.exceptions.splice(i, 1);
-                        return this;
+            if (measures.hasOwnProperty(measure)) {
+                // If a valid measure, try to remove it from the rules
+                for (i = 0, len = this.rules.length; i < len; i++) {
+                    if (this.rules[i].measure === pluralize(dateOrRule)) {
+                        this.rules.splice(i, 1);
                     }
                 }
+            } else {
+                var whatMoment = moment(dateOrRule, format, true);
 
-                return this;
-            }
+                // If valid date, try to remove it from exceptions
+                if (whatMoment.isValid()) {
+                    whatMoment = whatMoment.dateOnly(); // change to date only for perfect comparison
+                    for (i = 0, len = this.exceptions.length; i < len; i++) {
+                        if (whatMoment.isSame(this.exceptions[i])) {
+                            this.exceptions.splice(i, 1);
+                            return this;
+                        }
+                    }
 
-            // Otherwise, try to remove it from the rules
-            for (i = 0, len = this.rules.length; i < len; i++) {
-                if (this.rules[i].measure === pluralize(dateOrRule)) {
-                    this.rules.splice(i, 1);
+                    return this;
                 }
             }
         };
@@ -717,7 +721,7 @@
     // Plugin for removing all time information from a given date
     moment.fn.dateOnly = function() {
         if (this.tz && typeof(moment.tz) == 'function') {
-            return moment.tz(this.format('YYYY-MM-DD[T]00:00:00Z'), 'UTC');
+            return moment.tz(this.format('YYYY-MM-DD'), 'UTC');
         } else {
             return this.hours(0).minutes(0).seconds(0).milliseconds(0).add(this.utcOffset(), "minute").utcOffset(0);
         }
